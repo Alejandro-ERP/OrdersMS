@@ -1,19 +1,71 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PaginationDto } from 'src/common';
 import { PrismaService } from 'src/prisma.service';
-import { RpcException } from '@nestjs/microservices';
-import { of } from 'rxjs';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class OrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @Inject('PRODUCTS_SERVICE') private productsClient: ClientProxy,
+    private prisma: PrismaService,
+  ) {}
 
-  create(createOrderDto: CreateOrderDto) {
-    return this.prisma.order.create({
-      data: createOrderDto,
+  async create(createOrderDto: CreateOrderDto) {
+    const { items } = createOrderDto;
+    const ids = items.map((item) => item.productId);
+
+    const products = await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_product_list' }, { ids }),
+    );
+
+    const totalAmount = items.reduce((acc, item) => {
+      const product = products.find((p) => p.id === item.productId);
+      return acc + product.price * item.quantity;
+    }, 0);
+
+    const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
+
+    console.log(
+      'Creating order with totalAmount:',
+      totalAmount,
+      'and totalItems:',
+      totalItems,
+    );
+
+    const order = await this.prisma.order.create({
+      data: {
+        totalAmount,
+        totalItems,
+        OrderItem: {
+          create: items.map((item) => ({
+            productId: products.find((p) => p.id === item.productId).id,
+            quantity: items.reduce((acc, i) => acc + i.quantity, 0),
+            price: products.find((p) => p.id === item.productId).price,
+          })),
+        },
+      },
+      select: {
+        id: true,
+        totalAmount: true,
+        totalItems: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        OrderItem: {
+          select:{
+            id: true,
+            productId: true,
+            quantity: true,
+            price: true,
+          }
+        },
+      },
     });
+
+    return order;
   }
 
   async findAll(paginationDto: PaginationDto) {
@@ -55,12 +107,12 @@ export class OrdersService {
     return order;
   }
 
-  async update( updateOrderDto: UpdateOrderDto) {
+  async update(updateOrderDto: UpdateOrderDto) {
     const { id, ...data } = updateOrderDto;
 
     const order = await this.findOne(id);
 
-    if(order.status === data.status){
+    if (order.status === data.status) {
       return order;
     }
 
@@ -68,6 +120,5 @@ export class OrdersService {
       where: { id },
       data,
     });
-    
   }
 }
