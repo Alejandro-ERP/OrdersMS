@@ -5,11 +5,12 @@ import { PaginationDto } from 'src/common';
 import { PrismaService } from 'src/prisma.service';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { NATS_SERVICE } from 'src/transport/service';
 
 @Injectable()
 export class OrdersService {
   constructor(
-    @Inject('PRODUCTS_SERVICE') private productsClient: ClientProxy,
+    @Inject(NATS_SERVICE) private client: ClientProxy,
     private prisma: PrismaService,
   ) {}
 
@@ -18,7 +19,7 @@ export class OrdersService {
     const ids = items.map((item) => item.productId);
 
     const products = await firstValueFrom(
-      this.productsClient.send({ cmd: 'get_product_list' }, { ids }),
+      this.client.send({ cmd: 'get_product_list' }, { ids }),
     );
 
     const totalAmount = items.reduce((acc, item) => {
@@ -55,12 +56,12 @@ export class OrdersService {
         createdAt: true,
         updatedAt: true,
         OrderItem: {
-          select:{
+          select: {
             id: true,
             productId: true,
             quantity: true,
             price: true,
-          }
+          },
         },
       },
     });
@@ -95,7 +96,25 @@ export class OrdersService {
   }
 
   async findOne(id: string) {
-    const order = await this.prisma.order.findFirst({ where: { id } });
+    const order = await this.prisma.order.findFirst({
+      where: { id },
+      select: {
+        OrderItem: {
+          select: {
+            id: true,
+            productId: true,
+            quantity: true,
+            price: true,
+          },
+        },
+        id: true,
+        totalAmount: true,
+        totalItems: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
     if (!order) {
       throw new RpcException({

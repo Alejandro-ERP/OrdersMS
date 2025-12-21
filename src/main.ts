@@ -9,9 +9,9 @@ async function bootstrap() {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     AppModule,
     {
-      transport: Transport.TCP,
+      transport: Transport.NATS,
       options: {
-        port: envConfig.port,
+        servers: envConfig.natsServers,
       },
     },
   );
@@ -25,6 +25,6 @@ async function bootstrap() {
   );
 
   await app.listen();
-  logger.log(`Microservice is listening on port ${envConfig.port}`);
+  logger.log(`Microservice is listening on NATS server ${envConfig.natsServers}`);
 }
 bootstrap();
