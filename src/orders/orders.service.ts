@@ -29,13 +29,6 @@ export class OrdersService {
 
     const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
 
-    console.log(
-      'Creating order with totalAmount:',
-      totalAmount,
-      'and totalItems:',
-      totalItems,
-    );
-
     const order = await this.prisma.order.create({
       data: {
         totalAmount,
@@ -57,7 +50,6 @@ export class OrdersService {
         updatedAt: true,
         OrderItem: {
           select: {
-            id: true,
             productId: true,
             quantity: true,
             price: true,
@@ -66,7 +58,20 @@ export class OrdersService {
       },
     });
 
-    return order;
+    const { OrderItem, ...data } = order;
+
+    return {
+      data,
+      items: OrderItem.map((item) => {
+        const product = products.find((p) => p.id == item.productId);
+
+        return {
+          name: product.name,
+          amount: item.price,
+          quantity: item.quantity,
+        };
+      }),
+    };
   }
 
   async findAll(paginationDto: PaginationDto) {
