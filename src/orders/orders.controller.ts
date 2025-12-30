@@ -11,8 +11,7 @@ export class OrdersController {
 
   @MessagePattern('createOrder')
   async create(@Payload() createOrderDto: CreateOrderDto) {
-    const order = await this.ordersService.create(createOrderDto);
-    return order;
+    return await this.ordersService.create(createOrderDto);
   }
 
   @MessagePattern('findAllOrders')
