@@ -7,6 +7,8 @@ import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { NATS_SERVICE } from 'src/transport/service';
 import { ProductType } from './types/product.type';
+import { OrderReceiptDto } from './dto/order-receipt.dto';
+import { OrderStatus } from './enum/order-status.enum';
 
 @Injectable()
 export class OrdersService {
@@ -130,6 +132,7 @@ export class OrdersService {
         status: true,
         createdAt: true,
         updatedAt: true,
+        paid: true,
       },
     });
 
@@ -155,6 +158,32 @@ export class OrdersService {
     return this.prisma.order.update({
       where: { id },
       data,
+    });
+  }
+
+  async updateOrderReceipt(orderReceiptDto: OrderReceiptDto) {
+    const { id, orderId, receiptUrl } = orderReceiptDto;
+
+    const order = await this.findOne(orderId);
+
+    if (order.paid) {
+      return order;
+    }
+
+    await this.prisma.order.update({
+      where: { id: order.id },
+      data: {
+        paid: true,
+        paidAt: new Date(),
+        status: OrderStatus.COMPLETED,
+        stripeChargeId: id,
+        OrderReceipt: {
+          upsert: {
+            create: { receiptUrl },
+            update: { receiptUrl },
+          },
+        },
+      },
     });
   }
 }

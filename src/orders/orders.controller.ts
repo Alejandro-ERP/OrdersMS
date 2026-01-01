@@ -4,6 +4,7 @@ import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PaginationDto } from 'src/common';
+import { OrderReceiptDto } from './dto/order-receipt.dto';
 
 @Controller()
 export class OrdersController {
@@ -27,5 +28,10 @@ export class OrdersController {
   @MessagePattern('updateOrder')
   update(@Payload() updateOrderDto: UpdateOrderDto) {
     return this.ordersService.update(updateOrderDto);
+  }
+
+  @MessagePattern('updateOrderReceipt')
+  updateOrderReceip(@Payload() OrderReceiptDto: OrderReceiptDto) {
+    return this.ordersService.updateOrderReceipt(OrderReceiptDto);
   }
 }
