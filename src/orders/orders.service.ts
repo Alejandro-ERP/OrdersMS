@@ -5,10 +5,10 @@ import { PaginationDto } from 'src/common';
 import { PrismaService } from 'src/prisma.service';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { NATS_SERVICE } from 'src/transport/service';
 import { ProductType } from './types/product.type';
 import { OrderReceiptDto } from './dto/order-receipt.dto';
 import { OrderStatus } from './enum/order-status.enum';
+import { NATS_SERVICE } from 'src/transport/service';
 
 @Injectable()
 export class OrdersService {

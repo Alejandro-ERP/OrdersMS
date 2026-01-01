@@ -1,9 +1,9 @@
 import 'dotenv/config';
-import * as Joi from 'joi';
+import * as joi from 'joi';
 
-const envSchema = Joi.object({
-  DATABASE_URL: Joi.string().required(),
-  NATS_SERVERS: Joi.array().items(Joi.string()).required(),
+const envSchema = joi.object({
+  DATABASE_URL: joi.string().required(),
+  NATS_SERVERS: joi.array().items(joi.string()).required(),
 }).unknown(true);
 
 const { error, value: envVars } = envSchema.validate({
